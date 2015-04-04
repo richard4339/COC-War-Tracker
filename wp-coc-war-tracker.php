@@ -1,11 +1,15 @@
 <?php
-/*
-  Plugin Name: Clash of Clans War Tracker
-  Plugin URI: https://github.com/richard4339/coc-war-tracker
-  Description: Plugin allows for tracking of wars for Clash of Clans
-  Version: 0.0.1
-  Author: Richard
-  Author URI: http://www.digitalxero.com
+/**
+ * Plugin Name: Clash of Clans War Tracker
+ * Plugin URI: https://github.com/richard4339/coc-war-tracker
+ * Description: Plugin allows for tracking of wars for Clash of Clans
+ * Version: 0.0.1
+ * Author: Richard
+ * Author URI: http://www.digitalxero.com
+ *
+ * @author Richard Lunskey <richard@mozor.net>
+ * @version 0.0.1
+ * @copyright Copyright 2015 Richard Lynskey
  */
 /*  Copyright 2015  RICHARD LYNSKEY (email : richard@mozor.net)
   This program is free software; you can redistribute it and/or modify
@@ -174,14 +178,16 @@ function cwt_meta_box_callback( $post ) {
      */
     $w = get_post_meta( $post->ID, 'cwt_war', true );
 
-    //_p('cwt_war post_meta', $w);
-
-    for($i = 1; $i <= 50; $i++) {
+    $max = get_option( 'cwt_settings' , array('cwt_clan_size' => 50))['cwt_clan_size'];
+    if($max < 1) { $max = 50; }
+    for($i = 1; $i <= $max; $i++) {
 
         echo '<label for="cwt_user_'.$i.'">';
         _e('User '.$i, 'cwt_user_'.$i);
         echo '</label> ';
-        wp_dropdown_users(array('show_option_none' => '-', 'selected' => esc_attr($w[$i]), 'id' => 'cwt_user_'.$i, 'name' => 'cwt_user_'.$i, 'exclude' => 1));
+
+        $exclude = (int) get_option('cwt_settings', array('cwt_exclude' => 0))['cwt_exclude'];
+        wp_dropdown_users(array('show_option_none' => '-', 'selected' => esc_attr($w[$i]), 'id' => 'cwt_user_'.$i, 'name' => 'cwt_user_'.$i, 'exclude' => $exclude));
 
         echo '<br />';
 
@@ -233,7 +239,9 @@ function cwt_save_meta_box_data( $post_id ) {
 
     $meta = array();
 
-    for($i = 1; $i <= 50; $i++) {
+    $max = get_option( 'cwt_settings' , array('cwt_clan_size' => 50))['cwt_clan_size'];
+    if($max < 1) { $max = 50; }
+    for($i = 1; $i <= $max; $i++) {
 
         $field = 'cwt_user_'.$i;
 
@@ -254,5 +262,94 @@ function cwt_save_meta_box_data( $post_id ) {
 }
 add_action( 'save_post', 'cwt_save_meta_box_data' );
 
+
+
+
+
+
+
+
+add_action( 'admin_menu', 'cwt_add_admin_menu' );
+add_action( 'admin_init', 'cwt_settings_init' );
+
+
+function cwt_add_admin_menu(  ) {
+
+    add_options_page( 'War Tracker Settings', 'War Tracker', 'manage_options', 'wp-coc-war-tracker', 'cwt_options_page' );
+
+}
+
+
+function cwt_settings_init(  ) {
+
+    register_setting( 'pluginPage', 'cwt_settings' );
+
+    add_settings_section(
+        'cwt_pluginPage_section',
+        __( 'War User Settings', 'cwt_war' ),
+        'cwt_settings_section_callback',
+        'pluginPage'
+    );
+
+    add_settings_field(
+        'cwt_clan_size',
+        __( 'Max Clan Size', 'cwt_war' ),
+        'cwt_clan_size_render',
+        'pluginPage',
+        'cwt_pluginPage_section'
+    );
+
+    add_settings_field(
+        'cwt_exclude',
+        __( 'User To Exclude', 'cwt_war' ),
+        'cwt_exclude_render',
+        'pluginPage',
+        'cwt_pluginPage_section'
+    );
+
+
+}
+
+
+function cwt_clan_size_render(  ) {
+
+    $options = get_option( 'cwt_settings' );
+    ?>
+    <input type='number' name='cwt_settings[cwt_clan_size]' min="1" value='<?php echo $options['cwt_clan_size']; ?>'>
+<?php
+
+}
+
+
+function cwt_exclude_render(  ) {
+
+    $options = get_option( 'cwt_settings' );
+    wp_dropdown_users(array('show_option_none' => '-', 'selected' => esc_attr($options['cwt_exclude']), 'name' => 'cwt_settings[cwt_exclude]'));
+
+}
+
+
+function cwt_settings_section_callback(  ) {
+
+}
+
+
+function cwt_options_page(  ) {
+
+    ?>
+    <form action='options.php' method='post'>
+
+        <h2>War Tracker Settings</h2>
+
+        <?php
+        settings_fields( 'pluginPage' );
+        do_settings_sections( 'pluginPage' );
+        submit_button();
+        ?>
+
+    </form>
+<?php
+
+}
 
 ?>
